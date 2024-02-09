@@ -82,7 +82,7 @@ fn filter_logs(
 }
 
 fn main() {
-    let example_file_path = String::from("/Users/tomislav/Projects/xarvio/hrl-config");
+    let example_file_path = String::from("");
     let outputs = get_git_logs(example_file_path);
     let date_result = NaiveDate::from_str("2024-02-01");
     let date = match date_result {
