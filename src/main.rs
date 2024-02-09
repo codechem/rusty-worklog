@@ -39,7 +39,7 @@ impl CommandOutput {
 }
 
 fn main() {
-    let example_file_path = "/Users/tomislav/Projects/xarvio/hrl-config";
+    let example_file_path = "";
     let git_command = String::from("git");
     let output = Command::new(git_command)
         .current_dir(example_file_path)
