@@ -38,31 +38,28 @@ impl CommandOutput {
     }
 }
 
-fn main() {
-    let example_file_path = "";
-    let git_command = String::from("git");
-    let output = Command::new(git_command)
-        .current_dir(example_file_path)
+fn get_git_logs(file_path: String) -> Vec<CommandOutput> {
+    let output = Command::new(String::from("git"))
+        .current_dir(file_path)
         .args(["log", "-2", "--pretty='%as,%f,%an'"])
         .output()
         .expect("failed to execute process");
 
-    let output = String::from_utf8(output.stdout);
-    let real_output = match output {
+    let result_output = String::from_utf8(output.stdout);
+    let output = match result_output {
         Ok(v) => v,
         Err(e) => panic!("Invalid UTF-8 sequence: {}", e),
     };
-    let output = real_output
+    let commands_output = output
         .split("\n")
         .filter(|x| x.len() > 0)
         .map(|x| CommandOutput::new(x.to_string()))
         .collect::<Vec<CommandOutput>>();
-    println!("{:?}", output);
-    let dx = NaiveDate::parse_from_str("2024-02-08", "%Y-%m-%d");
+    commands_output
+}
 
-    let date_x = match dx {
-        Ok(dx) => dx,
-        Err(..) => panic!("Wrong date format"),
-    };
-    println!("{:?}", date_x)
+fn main() {
+    let example_file_path = String::from("/Users/tomislav/Projects/xarvio/hrl-config");
+    let outputs = get_git_logs(example_file_path);
+    println!("{:?}", outputs)
 }
