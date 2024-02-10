@@ -1,5 +1,9 @@
 use chrono::NaiveDate;
 use core::panic;
+use itertools::Itertools;
+use serde::Serialize;
+use std::error::Error;
+use std::io;
 use std::{process::Command, str::FromStr};
 
 #[derive(Debug)]
@@ -38,6 +42,17 @@ impl CommandOutput {
     }
 }
 
+#[derive(Debug, Serialize)]
+struct IssueLog {
+    issue: String,
+    date: NaiveDate,
+}
+impl IssueLog {
+    fn new((issue, date): (String, NaiveDate)) -> IssueLog {
+        IssueLog { issue, date }
+    }
+}
+
 fn get_git_logs(file_path: String) -> Vec<CommandOutput> {
     let output = Command::new(String::from("git"))
         .current_dir(file_path)
@@ -58,38 +73,64 @@ fn get_git_logs(file_path: String) -> Vec<CommandOutput> {
     commands_output
 }
 
-fn filter_by_date(command_logs: Vec<CommandOutput>, date: NaiveDate) -> Vec<CommandOutput> {
-    command_logs
-        .into_iter()
-        .filter(|x| x.date >= date)
-        .collect()
-}
-
-fn filter_by_user(command_logs: Vec<CommandOutput>, user_name: &String) -> Vec<CommandOutput> {
-    command_logs
-        .into_iter()
-        .filter(|x| &x.author == user_name)
-        .collect()
-}
-
 fn filter_logs(
     command_logs: Vec<CommandOutput>,
     user_name: &String,
-    date: NaiveDate,
+    date: &NaiveDate,
 ) -> Vec<CommandOutput> {
-    let date_filter = filter_by_date(command_logs, date);
-    filter_by_user(date_filter, user_name)
+    command_logs
+        .into_iter()
+        .filter(|x| &x.date >= &date)
+        .filter(|x| &x.author == user_name)
+        .collect::<Vec<CommandOutput>>()
+}
+
+fn extract_issue_from_msg(command_log: &CommandOutput) -> (String, NaiveDate) {
+    let msgs = &command_log.message.split("|").collect::<Vec<&str>>();
+    let issue = match msgs.get(0) {
+        Some(v) => v.trim(),
+        None => panic!("No issue found"),
+    };
+    (issue.to_string(), command_log.date)
+}
+
+fn get_issue_logs(command_logs: Vec<CommandOutput>) -> Vec<IssueLog> {
+    let mut issue_logs = Vec::new();
+    let grouped_logs = command_logs
+        .into_iter()
+        .group_by(|x| extract_issue_from_msg(&x));
+    for (key, _) in &grouped_logs {
+        issue_logs.push(IssueLog::new(key));
+    }
+    issue_logs
+}
+
+fn run(issue_logs: Vec<IssueLog>, write_file_path: &String) -> Result<(), Box<dyn Error>> {
+    let mut wtr = csv::Writer::from_path(write_file_path)?;
+    for issue_log in issue_logs {
+        wtr.serialize(issue_log)?;
+    }
+
+    wtr.flush()?;
+    Ok(())
 }
 
 fn main() {
-    let example_file_path = String::from("");
+    let example_file_path = String::from("/home/tomislav/Projects/test_project1");
     let outputs = get_git_logs(example_file_path);
-    let date_result = NaiveDate::from_str("2024-02-01");
+    let date_result = NaiveDate::from_str("2023-11-01");
     let date = match date_result {
         Ok(date_result) => date_result,
         Err(..) => panic!("Error with the date"),
     };
-    let user = String::from("IgnjatT");
-    let logs = filter_logs(outputs, &user, date);
-    println!("{:?}", logs)
+    let user = String::from("AnixDrone");
+    let result_file_path = String::from("worklog.csv");
+    let mut logs = filter_logs(outputs, &user, &date);
+    logs.sort_by_key(|a| extract_issue_from_msg(&a));
+
+    let mut issue_logs = get_issue_logs(logs);
+    issue_logs.sort_by_key(|a| a.date);
+    if let Err(err) = run(issue_logs, &result_file_path) {
+        println!("error running example: {}", err);
+    }
 }
