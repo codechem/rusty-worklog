@@ -1,0 +1,9 @@
+{
+  "projectName": "MyProject",
+  "author": "AnixDrone",
+  "date": "2023-11-01",
+  "repositories": [
+    "/home/tomislav/Projects/test_project1",
+    "/home/tomislav/Projects/test_project2"
+  ]
+}
