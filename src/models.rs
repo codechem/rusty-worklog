@@ -57,4 +57,5 @@ pub struct Config {
     pub repositories: Vec<String>,
     pub date: String,
     pub save_file_path: String,
+    pub regex_for_ticket_option: String,
 }

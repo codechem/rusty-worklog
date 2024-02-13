@@ -1,6 +1,7 @@
 use chrono::NaiveDate;
 use core::panic;
 use itertools::Itertools;
+use regex::Regex;
 use std::error::Error;
 use std::fs::File;
 use std::io::BufReader;
@@ -42,20 +43,28 @@ fn filter_logs(
         .collect::<Vec<CommandOutput>>()
 }
 
-fn extract_issue_from_msg(command_log: &CommandOutput) -> (String, NaiveDate) {
-    let msgs = &command_log.message.split("|").collect::<Vec<&str>>();
-    let issue = match msgs.get(0) {
-        Some(v) => v.trim(),
-        None => panic!("No issue found"),
+fn extract_issue_from_msg(
+    command_log: &CommandOutput,
+    regex_pattern: &String,
+) -> (String, NaiveDate) {
+    let re = Regex::new(regex_pattern);
+    let regex_object = match re {
+        Ok(r) => r,
+        Err(..) => panic!("Invalid regex patter"),
     };
-    (issue.to_string(), command_log.date)
+    let regex_operation = regex_object.find(&command_log.message);
+    let result = match regex_operation {
+        Some(res) => res,
+        None => panic!("No issue was found"),
+    };
+    (result.as_str().to_string(), command_log.date)
 }
 
-fn get_issue_logs(command_logs: Vec<CommandOutput>) -> Vec<IssueLog> {
+fn get_issue_logs(command_logs: Vec<CommandOutput>, regex_pattern: &String) -> Vec<IssueLog> {
     let mut issue_logs = Vec::new();
     let grouped_logs = command_logs
         .into_iter()
-        .group_by(|x| extract_issue_from_msg(&x));
+        .group_by(|x| extract_issue_from_msg(&x, regex_pattern));
     for (key, _) in &grouped_logs {
         issue_logs.push(IssueLog::new(key));
     }
@@ -75,12 +84,17 @@ fn write_to_file(
     Ok(())
 }
 
-fn get_logs_from_project(file_path: String, user: &String, date: &NaiveDate) -> Vec<IssueLog> {
+fn get_logs_from_project(
+    file_path: String,
+    user: &String,
+    date: &NaiveDate,
+    regex_pattern: &String,
+) -> Vec<IssueLog> {
     let outputs = get_git_logs(file_path);
     let mut logs = filter_logs(outputs, &user, &date);
-    logs.sort_by_key(|a| extract_issue_from_msg(&a));
+    logs.sort_by_key(|a| extract_issue_from_msg(&a, regex_pattern));
 
-    let mut issue_logs = get_issue_logs(logs);
+    let mut issue_logs = get_issue_logs(logs, regex_pattern);
     issue_logs.sort_by_key(|a| a.date);
     issue_logs
 }
@@ -116,7 +130,12 @@ fn main() {
         };
         project_logs = project_logs
             .into_iter()
-            .chain(get_logs_from_project(project, &content.author, &date))
+            .chain(get_logs_from_project(
+                project,
+                &content.author,
+                &date,
+                &content.regex_for_ticket_option,
+            ))
             .collect();
     }
     project_logs.sort_by_key(|a| (a.date, a.issue.clone()));
