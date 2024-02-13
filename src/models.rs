@@ -1,6 +1,6 @@
 use chrono::NaiveDate;
 use core::panic;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug)]
 pub struct CommandOutput {
@@ -47,4 +47,14 @@ impl IssueLog {
     pub fn new((issue, date): (String, NaiveDate)) -> IssueLog {
         IssueLog { issue, date }
     }
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct Config {
+    pub author: String,
+    pub project_name: String,
+    pub repositories: Vec<String>,
+    pub date: String,
+    pub save_file_path: String,
 }

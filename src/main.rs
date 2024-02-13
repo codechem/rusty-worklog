@@ -7,9 +7,8 @@ use std::io::BufReader;
 use std::path::Path;
 use std::{process::Command, str::FromStr};
 
-use serde::Deserialize;
 mod models;
-use crate::models::{CommandOutput, IssueLog};
+use crate::models::{CommandOutput, Config, IssueLog};
 
 fn get_git_logs(file_path: String) -> Vec<CommandOutput> {
     let output = Command::new(String::from("git"))
@@ -86,14 +85,7 @@ fn get_logs_from_project(file_path: String, user: &String, date: &NaiveDate) -> 
     issue_logs
 }
 
-#[derive(Deserialize, Debug)]
-struct User {
-    author: String,
-    projectName: String,
-    repositories: Vec<String>,
-    date: String,
-}
-fn read_user_from_file<P: AsRef<Path>>(path: P) -> Result<User, Box<dyn Error>> {
+fn read_user_from_file<P: AsRef<Path>>(path: P) -> Result<Config, Box<dyn Error>> {
     let file = File::open(path)?;
     let reader = BufReader::new(file);
 
@@ -114,27 +106,25 @@ fn main() {
         Err(e) => panic!("Error reading config file: {}", e),
     };
     println!("Found config: {:?}", content);
-    let test_project_1 = String::from("");
-    let test_project_2 = String::from("");
-    let date_result = NaiveDate::from_str("2023-11-01");
-    let date = match date_result {
-        Ok(date_result) => date_result,
-        Err(..) => panic!("Error with the date"),
-    };
-    let user = String::from("");
-    let result_file_path = String::from("worklog.csv");
-    let logs1 = get_logs_from_project(test_project_1, &user, &date);
-    let logs2 = get_logs_from_project(test_project_2, &user, &date);
-    let mut final_logs = logs1
-        .into_iter()
-        .chain(logs2.into_iter())
-        .collect::<Vec<IssueLog>>();
-    final_logs.sort_by_key(|a| (a.date, a.issue.clone()));
-    final_logs.dedup_by_key(|a| (a.date, a.issue.clone()));
-    final_logs.sort_by_key(|a| a.date);
-    let result = write_to_file(final_logs, &result_file_path);
+
+    let mut project_logs: Vec<IssueLog> = Vec::new();
+    for project in content.repositories {
+        let project_date = NaiveDate::from_str(&content.date);
+        let date = match project_date {
+            Ok(d) => d,
+            Err(..) => panic!("Error parsing the date"),
+        };
+        project_logs = project_logs
+            .into_iter()
+            .chain(get_logs_from_project(project, &content.author, &date))
+            .collect();
+    }
+    project_logs.sort_by_key(|a| (a.date, a.issue.clone()));
+    project_logs.dedup_by_key(|a| (a.date, a.issue.clone()));
+    project_logs.sort_by_key(|a| a.date);
+    let result = write_to_file(project_logs, &content.save_file_path);
     match result {
-        Ok(_) => println!("Worklog written to {}", &result_file_path),
+        Ok(_) => println!("Worklog written to {}", &content.save_file_path),
         Err(e) => println!("Error writing to file: {}", e),
     }
 }
