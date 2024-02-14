@@ -50,14 +50,14 @@ fn extract_issue_from_msg(
     let re = Regex::new(regex_pattern);
     let regex_object = match re {
         Ok(r) => r,
-        Err(..) => panic!("Invalid regex patter"),
+        Err(..) => panic!("Invalid regex pattern"),
     };
-    let regex_operation = regex_object.find(&command_log.message);
+    let regex_operation: Option<regex::Match<'_>> = regex_object.find(&command_log.message);
     let result = match regex_operation {
-        Some(res) => res,
-        None => panic!("No issue was found"),
+        Some(res) => res.as_str().to_string(),
+        None => String::from(""),
     };
-    (result.as_str().to_string(), command_log.date)
+    (result, command_log.date)
 }
 
 fn get_issue_logs(command_logs: Vec<CommandOutput>, regex_pattern: &String) -> Vec<IssueLog> {
@@ -141,7 +141,12 @@ fn main() {
     project_logs.sort_by_key(|a| (a.date, a.issue.clone()));
     project_logs.dedup_by_key(|a| (a.date, a.issue.clone()));
     project_logs.sort_by_key(|a| a.date);
-    let result = write_to_file(project_logs, &content.save_file_path);
+
+    let filtered_logs = project_logs
+        .into_iter()
+        .filter(|x| x.issue.len() > 0)
+        .collect::<Vec<IssueLog>>();
+    let result = write_to_file(filtered_logs, &content.save_file_path);
     match result {
         Ok(_) => println!("Worklog written to {}", &content.save_file_path),
         Err(e) => println!("Error writing to file: {}", e),

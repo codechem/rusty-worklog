@@ -1,11 +1,12 @@
 {
   "projectName": "YourProject",
   "author": "YourGitUsername",
-  "date": "EarliestDateForFilterEx2024-11-01",
+  "date": "yyyy-mm-dd",
   "repositories": [
     "filepath/to/project",
     "filepath/to/project1",
     "filepath/to/project2"
   ],
-  "saveFilePath": "filepath/to/save/sheet.csv"
+  "saveFilePath": "filepath/to/save/sheet.csv",
+  "regexForTicketOption": ".*"
 }
