@@ -47,6 +47,22 @@ impl IssueLog {
     pub fn new((issue, date): (String, NaiveDate)) -> IssueLog {
         IssueLog { issue, date }
     }
+    pub fn collaps_logs(issues: Vec<IssueLog>) -> IssueLog {
+        let date = match issues.get(0) {
+            Some(issue) => issue.date,
+            None => panic!("Empty list"),
+        };
+
+        let raw_issue = issues
+            .into_iter()
+            .map(|x| x.issue)
+            .collect::<Vec<String>>()
+            .join(";");
+        IssueLog {
+            issue: raw_issue,
+            date,
+        }
+    }
 }
 
 #[derive(Deserialize, Debug)]

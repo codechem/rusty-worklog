@@ -146,7 +146,13 @@ fn main() {
         .into_iter()
         .filter(|x| x.issue.len() > 0)
         .collect::<Vec<IssueLog>>();
-    let result = write_to_file(filtered_logs, &content.save_file_path);
+    let grouped_logs = filtered_logs.into_iter().group_by(|x| x.date);
+    let stacked_logs: Vec<IssueLog> = grouped_logs
+        .into_iter()
+        .map(|x| IssueLog::collaps_logs(x.1.collect()))
+        .collect();
+
+    let result = write_to_file(stacked_logs, &content.save_file_path);
     match result {
         Ok(_) => println!("Worklog written to {}", &content.save_file_path),
         Err(e) => println!("Error writing to file: {}", e),
