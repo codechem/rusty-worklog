@@ -40,8 +40,8 @@ impl CommandOutput {
 
 #[derive(Debug, Serialize)]
 pub struct IssueLog {
-    pub issue: String,
     pub date: NaiveDate,
+    pub issue: String,
 }
 impl IssueLog {
     pub fn new((issue, date): (String, NaiveDate)) -> IssueLog {

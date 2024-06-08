@@ -12,9 +12,10 @@ mod models;
 use crate::models::{CommandOutput, Config, IssueLog};
 
 fn get_git_logs(file_path: String) -> Vec<CommandOutput> {
+    let _git_pull = Command::new(String::from("git")).args(["pull"]);
     let output = Command::new(String::from("git"))
         .current_dir(file_path)
-        .args(["log", "--pretty='%as,%s,%an'"])
+        .args(["log","--all","--pretty='%as,%s,%an'"])
         .output()
         .expect("failed to execute process");
 
@@ -60,8 +61,9 @@ fn extract_issue_from_msg(
     (result, command_log.date)
 }
 
-fn get_issue_logs(command_logs: Vec<CommandOutput>, regex_pattern: &String) -> Vec<IssueLog> {
+fn get_issue_logs(mut command_logs: Vec<CommandOutput>, regex_pattern: &String) -> Vec<IssueLog> {
     let mut issue_logs = Vec::new();
+    command_logs.sort_by_key(|x| extract_issue_from_msg(&x, regex_pattern));
     let grouped_logs = command_logs
         .into_iter()
         .group_by(|x| extract_issue_from_msg(&x, regex_pattern));
@@ -138,6 +140,8 @@ fn main() {
             ))
             .collect();
     }
+    project_logs.sort_by_key(|a| a.date);
+    println!("{:?}", &project_logs);
     project_logs.sort_by_key(|a| (a.date, a.issue.clone()));
     project_logs.dedup_by_key(|a| (a.date, a.issue.clone()));
     project_logs.sort_by_key(|a| a.date);
