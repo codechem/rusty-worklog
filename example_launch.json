@@ -1,0 +1,13 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "(OSX) Launch",
+      "type": "lldb",
+      "request": "launch",
+      "program": "${workspaceRoot}/target/debug/rusty-worklog",
+      "args": ["example_config.json"],
+      "cwd": "${workspaceRoot}"
+    }
+  ]
+}
